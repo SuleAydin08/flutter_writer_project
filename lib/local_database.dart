@@ -2,6 +2,7 @@
 //Modeller belirli bir sınıfa ayit nesneleri tek bir çatı altına toplamak içinde kullanılır.
 
 import 'package:flutter_writer_project/model/book.dart';
+import 'package:flutter_writer_project/model/section.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sqflite/sqlite_api.dart';
 import 'package:path/path.dart';
@@ -37,6 +38,14 @@ class LocalDataBase {
   String _booksName = "name";
   String _booksCreationDate = "creationDate";
 
+//Section veritabanına gelen değerlerin türü
+  String _sectionsTableName = "section";
+  String _idSections = "id";
+  String _bookIdSections = "bookId";
+  String _titleSections = "title";
+  String _contentsSections = "contents";
+  // String _creationDateSections = "creationDate";
+
 //Üsteki nesneyi döndüreceğinden buda database döndürür.Üsteki nesneyi bu fonksiyon aracılığıyla kullanırız.
 ////Bu veri tabanı döndürüleceği için fonksiyonda null olur.
   Future<Database?> _dataBaseBring() async {
@@ -50,12 +59,16 @@ class LocalDataBase {
       String dataBasePath = join(filePath, "writer.db");
       // "filePath/writer.db";//Bu şekilde neden yapmadık derseniz bazı işletim sistemlerinde / bu kullanılırken bazılarında \ bu kullanılır.
       //join bunu işletim sistemine göre ayarlıyor.
-
+      
+      // //Veri tabanını sil
+      // await deleteDatabase(dataBasePath);
       //Eğer veri tabanı oluşmuşsa geri döndürecek eğer oluşmamışsa oluşturacaktır veri tabanını.O fonksiyonun ismide altta yazdığım fonksiyondur.
       _dataBase = await openDatabase(
         dataBasePath,
         version: 1,
         //Tablo oluşturacağım fonksiyonu yazarım buraya,
+        //Tablo oluşturma kısmı veri tabanını ilk kez oluşturduğumuzda çalıştığı için bölümler sayfasında fab basarak değer girdiğimizde çalışmadı.
+        //oncreat parametresi oluşturulduğunda demektir.
         onCreate: _createTable,
       ); //Future döndürdüğünden bunu veri tabanı nesneme atıyorum ve awaiti unutmuyorum.
     }
@@ -74,6 +87,16 @@ class LocalDataBase {
 	PRIMARY KEY($_booksId AUTOINCREMENT)
 );
    """);
+    await db.execute("""
+   CREATE TABLE  $_sectionsTableName (
+	$_idSections	INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
+	$_bookIdSections	INTEGER NOT NULL,
+  $_titleSections	TEXT NOT NULL,
+  $_contentsSections	TEXT,
+	$_booksCreationDate	TEXT DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY("$_bookIdSections") REFERENCES "$_sectionsTableName"("$_booksId") ON UPDATE CASCADE ON DELETE CASCADE
+);
+   """);
   }
   // int? number;//Başlangıçta null olsun.
   //Singelton yapmaya neden ihityaç duyuyoruz.
@@ -83,7 +106,7 @@ class LocalDataBase {
   //Ancaqk veritabanında statik yapamayacağımız nesnelerimiz olacak veritabanında bir nesnesi oluşturacağımda değer atamam gerektiği için statik yapamam.
   //Bu sebeple tek tek üsteki gibi nesne oluşturmak mantıklı olacaktır.
 
-  //Crud Operasyonları
+  //Book Crud Operasyonları
   Future<int> createBook(Book book) async {
     Database? db = await _dataBaseBring();
     //Database nul olduğu için Null olup olmadığını kontrol etme işlemi;
@@ -145,6 +168,81 @@ class LocalDataBase {
         //Alttaki 2 parametre olmazsa bütün kitaplar silinir.
         where: "$_booksId = ?",
         whereArgs: [book.id],
+      );
+    } else {
+      //Hiçbir satır silinmeyeceği için 0 döndürüyoruz.
+      return 0;
+    }
+  }
+
+  //Section Crud Operasyonları
+  Future<int> createSection(Section section) async {
+    Database? db = await _dataBaseBring();
+    //Database nul olduğu için Null olup olmadığını kontrol etme işlemi;
+    if (db != null) {
+      //db.insert int id döndüreceğinden ve detayında awit yazdığından await yaparız ve future yaparız.Anında bir int döndürülmediği için future yaptık ve int değer alacağımız için int yazdık.
+      return await db.insert(
+          _sectionsTableName,
+          section
+              .toMap()); //Book nesnesi book türünde benden map istiyor book sınıfının içinde işlemler yapılır bunun için;
+    } else {
+      //Nullsada bir değer döndürmen lazım. id -1 olamayacağından hata var demek ve değer döndüremeyecek demektir.
+      return -1;
+    }
+  }
+
+  //Read
+  Future<List<Section>> readAllSection(int bookId) async {
+    Database? db = await _dataBaseBring();
+    //b yi listeye ekleme işlemi
+    List<Section> sections = [];
+    if (db != null) {
+      //Map Türünde liste döndürecek.
+      List<Map<String, dynamic>> sectionsMap = await db.query(
+        _sectionsTableName,
+        //Üst kısımda int books yazdığımızdan şu olan verileri getir demek için alttaki kodu ekliyoruz.
+        where: "$_bookIdSections = ?",
+        whereArgs: [bookId],
+      ); //Bu kitapları tek tek gezip map türünden kitap nesnesine çevireceğim.
+      for (Map<String, dynamic> m in sectionsMap) {
+        //m ismini verdiğim map kitaba çevireceğim.
+        Section s = Section.fromMap(m);
+        //Kitap ekleme
+        sections.add(s);
+      }
+    }
+    return sections;
+  }
+
+  //Update İşlemi
+  Future<int> updateSection(Section section) async {
+    //Update kitap kaç tane satırda güncelleme yaptığımızı döndürecek.
+    Database? db = await _dataBaseBring();
+    //Database nul olduğu için Null olup olmadığını kontrol etme işlemi;
+    if (db != null) {
+      //idsi ? işaretine eşit olanı güncelle.
+      return await db.update(
+        _sectionsTableName, section.toMap(), where: "$_idSections = ? ",
+        whereArgs: [
+          section.id
+        ], //Kitap güncellenmiş olsada idsi aynı değişmeyecek.
+      );
+    } else {
+      return 0; //Sıfır satır güncellenme
+    }
+  }
+
+  //Silme İşlemi
+  Future<int> deleteSection(Section section) async {
+    Database? db = await _dataBaseBring();
+    //Database nul olduğu için Null olup olmadığını kontrol etme işlemi;
+    if (db != null) {
+      //Silinen satır sayısını döndürecek.
+      return await db.delete(
+        _sectionsTableName,
+        //Alttaki 2 parametre olmazsa bütün kitaplar silinir.
+        where: "$_idSections = ?",
+        whereArgs: [section.id],
       );
     } else {
       //Hiçbir satır silinmeyeceği için 0 döndürüyoruz.
