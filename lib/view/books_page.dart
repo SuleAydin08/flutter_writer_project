@@ -13,8 +13,24 @@ class _BooksPageState extends State<BooksPage> {
   //Yerel veri tabanı türünden nesne oluşturuyoruz.
   LocalDataBase _localDataBase = LocalDataBase();
 
+  //Tüm kategorileri görüntüleme işlemi
+  List<int> _allCategories = [
+    -1
+  ]; //Sıfırdan önceki -1 ise bütün kategorileri oluşturmasın demek istiyorum.-1 hiç bir kategoriye verilmeyecek.
   //Okuduğumuz listeyi sınıf değişkenine atama işlemi;
   List<Book> _books = [];
+
+  int _selectedCategory = -1; //Seçilen kategori defaultda -1dir yani hepsidir.
+
+  //in anahtar kelimesini mesela verilerin hepsini silmekı istiyoruz checkbox yardımıyla ve in anahtar kelimesi ile bunu kolaylıkla yapabiliriz.
+  List<int> _selectedBookId = [];
+
+  @override
+  void initState() {
+    super.initState();
+    //addAll bir liste alır ve verdiğim tüm öğeleri bu listeye ekler.
+    _allCategories.addAll(Constants.categories.keys);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +45,9 @@ class _BooksPageState extends State<BooksPage> {
     return AppBar(
       backgroundColor: Colors.deepPurple[100],
       title: Text("Kitaplar Sayfası"),
+      actions: [
+        IconButton(onPressed: _selectedBookDelete, icon: Icon(Icons.delete)),
+      ],
     );
   }
 
@@ -40,9 +59,57 @@ class _BooksPageState extends State<BooksPage> {
   }
 
   Widget _buildListView(BuildContext context, AsyncSnapshot<void> snapshot) {
-    return ListView.builder(
-      itemCount: _books.length,
-      itemBuilder: _buildListItem,
+    return Column(
+      //Column içerisinde listview builder kullandığımız içinde listviewbuilderı expanded ile sarmamız gerekir.
+      children: [
+        _buildCategoryFiltering(),
+        Expanded(
+          child: ListView.builder(
+            itemCount: _books.length,
+            itemBuilder: _buildListItem,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryFiltering() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        Text("Kategori: "),
+        DropdownButton<int>(
+          items: _allCategories.map((categoryId) {
+            //Categoy key gezip atama işlemi yapılıyor.
+            return DropdownMenuItem<int>(
+              value: categoryId,
+              child: Text(
+                //Kategori id -1 ise hepsini yazdır değilse alttaki ifadeyi yazdır demek.
+                categoryId == -1
+                    ? "Hepsi"
+                    : Constants.categories[categoryId] ??
+                        "", //Burada hangi anahtarda ise buna karşılık gelen değeri getirecek.
+              ),
+            );
+          }).toList(),
+          //Değer değiştiğinde değer yani fonksiyon atanır.
+          onChanged: (int? newValue) {
+            if (newValue != null) {
+              setState(() {
+                //Yeni değer null değilse categorydeki değeri yeni değere ata demek.
+                _selectedCategory =
+                    newValue; //Burada yaptığımız işleme rağmen sayfada seçtiğimiz değer gelmedi bunun sebebi burda
+                //kullandığımız setstate BooksPage sayfasınındır çünkü dialog her ne kadar o sayfada açılmış gibi gözüksede ayrı sayfadır.
+                //Yani dialogun ayrı bir stateti olması gerekir.
+                //O halde burda ne yapacağız biz üst ksıımda yaptığımız columnı ayrı bir widget olarak tanımlayıp bu sayfada content
+                //içerisinde onu çağırabiliriz.Ama biz buu önceki projelerde yaptığımız için farklı bir yöntem ile yapacağız.
+              });
+            }
+          },
+          //Bu kategori bilgisidir.
+          value: _selectedCategory,
+        ),
+      ],
     );
   }
 
@@ -61,12 +128,34 @@ class _BooksPageState extends State<BooksPage> {
                 _bookUpdate(context, index);
               },
               icon: Icon(Icons.edit)),
-          IconButton(
-              //Biz 4 kitabı sildiğimizde kitap eklediğimizde sildiğimiz veri id yerine hiç bir zaman bir eklenmez sayı en sonda olduğı sayıdan devam eder.
-              onPressed: () {
-                _bookDelete(index);
-              },
-              icon: Icon(Icons.delete))
+          // IconButton(
+          //   //Biz 4 kitabı sildiğimizde kitap eklediğimizde sildiğimiz veri id yerine hiç bir zaman bir eklenmez sayı en sonda olduğı sayıdan devam eder.
+          //   onPressed: () {
+          //     _bookDelete(index);
+          //   },
+          //   icon: Icon(Icons.delete),
+          // ),
+          Checkbox(
+            value: _selectedBookId.contains(_books[index]
+                .id), //Seçilen kitap id denk gelen değer.
+            onChanged: (bool? newValue) {
+              if (newValue != null) {
+                int? bookId = _books[index].id;
+                if (bookId != null) {
+                  setState(() {
+                    //Bu işlemlerisetsate içerisinde yapmazsak checkbox bassak bile bir değişim göremeyiz.
+                    if (newValue) {
+                      //Seçildiyse
+                      _selectedBookId.add(bookId);
+                    } else {
+                      //Seçilme kaldırıldığında
+                      _selectedBookId.remove(bookId);
+                    }
+                  });
+                }
+              }
+            },
+          ),
         ],
       ),
       title: Text(_books[index].name),
@@ -89,6 +178,7 @@ class _BooksPageState extends State<BooksPage> {
   }
 
   //Kitap ekleme
+  //Burada for döngüsü ile 100 tane veri ekleyeceğiz.
   void _bookAdd(BuildContext context) async {
     //Onayla butonunun döndürdüğü değeri kullanma
     //Open window future döndürdüğü için await async kullanılır.
@@ -110,6 +200,16 @@ class _BooksPageState extends State<BooksPage> {
       //Veri ekleme işleminden sonra sayfanın veri eklendiğinde güncellenmesi için setstate çağırıyoruz.Artık floatin button eklediğimiz direk güncellenecek.
       setState(() {});
     }
+
+    //100 tane veri ekleme işlemi;
+    // for(int i = 1 ; i <= 100 ; i++){
+    //   Book newBook = Book(i.toString(), DateTime.now(), 0);
+    //   int bookId = await _localDataBase.createBook(newBook);
+    // }
+    // setState(() {
+    // });
+
+    
     // //Pencere kapandığında dönen değeri al
     // // print(bookName ?? "Null Döndü");//Ktap adı yoksa konsolda null döndü yazdır.//Burada kontrol yaptık.
 
@@ -162,9 +262,20 @@ class _BooksPageState extends State<BooksPage> {
     }
   }
 
+  //Seçilen kitapları silmek için oluşturulan fonksiyon
+  void _selectedBookDelete() async{
+    //Book book = _books[index]; bu kısıma ihtiyaç yok çünkü belirli indexteki kitapları silmiyoruz.
+    //Yerel kitao ağına silme fonksiyonunu gönderecek.
+    int numberOfDeletedRows = await _localDataBase.deleteBooks(_selectedBookId);
+    if (numberOfDeletedRows > 0) {
+      setState(() {});
+    }
+  }
+
   //Tüm kitapları getirme fonksiyonu
   Future<void> _bringAllBooks() async {
-    _books = await _localDataBase.readAllBooks();
+    _books = await _localDataBase.readAllBooks(
+        _selectedCategory); //Seçilen kategoriye göre listelemeyi sağlayacak.
   }
 
   //+ butonuna tıklandığında pencere açma
@@ -240,7 +351,7 @@ class _BooksPageState extends State<BooksPage> {
                         value: category,
                       ),
                     ],
-                  )
+                  ),
                 ],
               );
             },

@@ -7,6 +7,6 @@ class Constants {
     3: "Eğitim",
     4: "Fantastik",
     5: "Bilim Kurgu",//Bu kısımda herhangi bir değişikli k yapıldığında eskiden oluşturulan veriler olduğu gibi kalacaktır.Ama yeni oluşturulanlar güncel olarak değiştirilen veri ile oluşacaktır.
-    6: "Biyografi",
+    6: "Polisiye",
   };
 }

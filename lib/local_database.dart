@@ -86,25 +86,24 @@ class LocalDataBase {
     //sqllife programından aldığımız kodun "" işaretlerini temizledikten sonra
     //Uzun sürecek fonksiyon olduğundan başına await fonksiyonuda async yapıyoruz.
     await db.execute("""
-   CREATE TABLE  $_booksTableName (
-	$_booksId	INTEGER NOT NULL UNIQUE,
-	$_booksName	TEXT NOT NULL,
-	$_booksCreationDate	INTEGER,
-  $_categoryBooks	INTEGER DEFAULD 0,
-	PRIMARY KEY($_booksId AUTOINCREMENT)
-);
-   """);
+    CREATE TABLE $_booksTableName (
+      $_booksId INTEGER PRIMARY KEY AUTOINCREMENT,
+      $_booksName TEXT NOT NULL,
+      $_booksCreationDate INTEGER,
+      $_categoryBooks INTEGER DEFAULT 0
+    );
+  """);
     await db.execute("""
-   CREATE TABLE  $_sectionsTableName (
-	$_idSections	INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
-	$_bookIdSections	INTEGER NOT NULL,
-  $_titleSections	TEXT NOT NULL,
-  $_contentsSections	TEXT,
-	$_booksCreationDate	TEXT DEFAULT CURRENT_TIMESTAMP,
-	FOREIGN KEY("$_bookIdSections") REFERENCES "$_sectionsTableName"("$_booksId") ON UPDATE CASCADE ON DELETE CASCADE
-);
-   """);
-  }
+    CREATE TABLE $_sectionsTableName (
+      $_idSections INTEGER PRIMARY KEY AUTOINCREMENT,
+      $_bookIdSections INTEGER NOT NULL,
+      $_titleSections TEXT NOT NULL,
+      $_contentsSections TEXT,
+      $_booksCreationDate TEXT DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY($_bookIdSections) REFERENCES $_booksTableName($_booksId) ON UPDATE CASCADE ON DELETE CASCADE
+    );
+  """);
+}
 
   Future<void> _updateApplication(
       Database db, int oldVersion, int newVersion) async {
@@ -120,8 +119,9 @@ class LocalDataBase {
     ];
     //Buradada üstteki liste için for döngüsü oluşturuyoruz.
     // for(int i=oldVersion-1; i<newVersion-1; i++){
-    for(int i=0; i<2; i++){//Yani listenin birinci elemanı çalışacak Burda listede 
-    //hangisini çalıştırmak istiyorsak onu çalıştırabiliriz.
+    for (int i = 0; i < 2; i++) {
+      //Yani listenin birinci elemanı çalışacak Burda listede
+      //hangisini çalıştırmak istiyorsak onu çalıştırabiliriz.
       await db.execute(updateCommands[i]);
     }
     //Eski versiyon kullanıcı en son cihazında hangi versiyon ile çalıştığıdır.
@@ -148,15 +148,75 @@ class LocalDataBase {
     }
   }
 
+//Filtreleme için değişikliklerimizi burada yapıyoruz.
   //Read
-  Future<List<Book>> readAllBooks() async {
+  Future<List<Book>> readAllBooks(int categoryId) async {
     Database? db = await _dataBaseBring();
     //b yi listeye ekleme işlemi
     List<Book> books = [];
     if (db != null) {
+      //Where string
+      String? filter; //Filter başlangıçta null olsun.
+      //WhereArgs Liste
+      List<dynamic> filterArguments = [];
+
+      //Dart ve && sqlde ve and demektir.
+      //Dartta veya || sqlde or demektir.
+      if (categoryId >= 0) {
+        //0dan büyük olduğu kısımlarda bu çalışmaz
+        // filter =
+        //     "$_categoryBooks = ? and $_booksId > ? and $_booksId <= ?"; //Andde bir koşula uymazsa bir diğerine mutlaka uyması gerekir.
+        // //Üstteki soru işaretlerinin değerlerinide burada veriyorum.
+        // filterArguments.add(categoryId);
+        // filterArguments.add(2); //Buda ikiden büyük olanları getir demek.
+        // filterArguments.add(5);
+        // // //Sayıya göre filtreleme
+        // // filter = "$_booksId = ?";
+        // // filterArguments.add(3);
+
+        // //Eğer or kullanırsak;
+        // filter = "$_categoryBooks = ? or $_booksId > ?";
+        // filterArguments.add(categoryId);
+        // filterArguments.add(2);
+        //Bu durumdada iki hariç olanları listeler.
+
+        filter = "$_categoryBooks = ?";
+        filterArguments.add(categoryId);
+      }
       //Map Türünde liste döndürecek.
       List<Map<String, dynamic>> booksMap = await db.query(
-          _booksTableName); //Bu kitapları tek tek gezip map türünden kitap nesnesine çevireceğim.
+        _booksTableName, //Bu kitapları tek tek gezip map türünden kitap nesnesine çevireceğim.
+        //Filtreleme işlemi;
+        where: filter, //Burada üst kısımda oluşturduğumuz değerleri veriyoruz.
+        whereArgs:
+            filterArguments, //Burada üst kısımda oluşturduğumuz değerleri veriyoruz.
+            //Verileri Alfabeye göre sıralama;
+        // orderBy: _booksName,//Kitap isimlerine gmre sıralamasını istiyorum.Başka bir şekilde sıralamak istediğimizde onu çağırarak yapabilir mesela _booksId...
+        // orderBy: "$_booksId desc" //Büyükten küçüğe göre id göre sıralama.
+        //Kategori sıralamasına göre sıralama 
+
+        // orderBy: "$_categoryBooks desc, $_booksName asc",//Kategori sıralamasına göre alfabetik olarak sıralama.
+        //desc büyükten küçüğe, asc küçükten büyüğe asc yazmayada gerek yok çünkü veriler varsayılan olarak küçükten büyüğe sıralanır.
+
+        // orderBy: "$_booksName collate localized",//Türkçe karakterleride sıralamada gösterme en altta gözükmesini engelleme.Yerel sıralama yap demek.
+
+        orderBy: "$_booksName ",//Flutterda türkçe karaktere göre sıralama nasıl yapılıyor.
+
+        // //Databasese kayıtlı verilerin istediğimiz kadarını çekme;
+        // limit: 4,//4 veri çekilecek.//Kategori seçimi yaparsak seçtiğimiz verideki 4 veriyi getirir.
+        
+        // //Son kayıt edilen kitabı getirmek.
+        // orderBy: "$_booksId desc",
+        // limit: 1,
+
+        // // //es geçmek istediğimiz veri sayısı;
+        // offset: 2,//İlk 2 veriyi getirme demek.
+
+      );
+      // //Bütün kitaplar getirilsin demek
+      //  List<Map<String, dynamic>> booksMap = await db.query(
+      //   _booksTableName, //Bu kitapları tek tek gezip map türünden kitap nesnesine çevireceğim.
+      // );
       for (Map<String, dynamic> m in booksMap) {
         //m ismini verdiğim map kitaba çevireceğim.
         Book b = Book.fromMap(m);
@@ -277,4 +337,45 @@ class LocalDataBase {
       return 0;
     }
   }
+
+  //Kitapları Silme İşlemi
+  Future<int> deleteBooks(List<int> booksId) async {
+    //Siliceğimiz kitapların idsinden oluşan değerleri alacak.
+    Database? db = await _dataBaseBring();
+    //Database nul olduğu için Null olup olmadığını kontrol etme işlemi;
+    if (db != null && booksId.isNotEmpty) {
+      //db null değil ve kitap id listesi boş değilse yap bu işlemi diyoruz.
+      //Silinen satır sayısını döndürecek.
+
+      String filter =
+          "$_booksId in ("; //Başlangıç kısmına $_booksId in bu kısmıda ekliyorum.
+
+      for (int i = 0; i < booksId.length; i++) {
+        //son elemanı bulmamız gerekecek.
+        if (i != booksId.length - 1) {
+          //i != booksId.length -1 son eleman kontrolü
+          filter += "?,";
+        } else {
+          filter += "?)";
+        }
+        //Üst kısımda bu where: "$_booksId in (?, ?, ?, ?)",işlemi yapıyoruz.
+      }
+
+      return await db.delete(
+        _booksTableName,
+        //Alttaki 2 parametre olmazsa bütün kitaplar silinir.
+        where: filter,
+        // where: "$_booksId in (?, ?, ?, ?)", //Silmek istediklerimiz için bunu yapabilirz ama bu çok fazla veri olduğunda doğru bir kullanım olmaz.
+        //Bu nedenle bunu başka türlü halletmeliyiz.
+        whereArgs:
+            booksId, //deletebooks () içerisindeki listenin adını buraya yazıyoruz.
+      );
+    } else {
+      //Hiçbir satır silinmeyeceği için 0 döndürüyoruz.
+      return 0;
+    }
+  }
 }
+//Listenin son elemanı herzaman listeninuzunluğu -1 elemandır.
+
+//Verileri öbek öbek bölüm bölüm çekmeye sayfala denir. Ekrana sığacak kadar olan veriler çekilir hepsini çektiğimizde uygulamada sıkıntı yaşarız.
