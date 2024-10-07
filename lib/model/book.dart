@@ -6,15 +6,17 @@ class Book {
   String name;
   //Datetime dartta tarih ve saati tuttuğumuz yapıdır.
   DateTime creationDate;
+  int category;//Categorinin int değerlerini alacağım için int.
 
   //id biz kendimiz belirlemeyecğimiz için constructerda almıyoruz.Bu sebeple id null yapılırsa sorun çözülür.
-  Book(this.name, this.creationDate);
+  Book(this.name, this.creationDate, this.category);
 
 //Bu mapten kitap nesnemi üreteceğim.
   Book.fromMap(Map<String, dynamic> map)
       : id = map["id"],
         name = map["name"],
-        creationDate = DateTime.fromMillisecondsSinceEpoch(map["creationDate"]);
+        creationDate = DateTime.fromMillisecondsSinceEpoch(map["creationDate"]),
+        category = map["category"] ?? 0;
 
 //Map oluşturma ve mapten nesne oluşturma çok yaygın işlemlerdir.Yani toMap ve fromMap çok yaygın işlemlerdir.Çok ihtiyacımız olabilecek bir şey olduğu için model sınıfına koyduk.
   //Mape dönüştürme;toMap adına yapılır.
@@ -23,8 +25,10 @@ class Book {
       "id": id,
       "name": name,
       "creationDate": creationDate
-          .millisecondsSinceEpoch, //Burada sqlde int ama buradaki sınıfta datetime olduğu için dönüşüm yapmalıyız.
+          .millisecondsSinceEpoch,
+       //Burada sqlde int ama buradaki sınıfta datetime olduğu için dönüşüm yapmalıyız.
       //millisecondsSinceEpoch mili saniyeye çevirme işlemi yapar.
+      "category": category,
     };
   }
 }

@@ -1,6 +1,8 @@
 //Ben sql kodlarımı sadece bu sınıfın içerisinde yapacağım.
 //Modeller belirli bir sınıfa ayit nesneleri tek bir çatı altına toplamak içinde kullanılır.
 
+import 'dart:async';
+
 import 'package:flutter_writer_project/model/book.dart';
 import 'package:flutter_writer_project/model/section.dart';
 import 'package:sqflite/sqflite.dart';
@@ -37,6 +39,7 @@ class LocalDataBase {
   String _booksId = "id";
   String _booksName = "name";
   String _booksCreationDate = "creationDate";
+  String _categoryBooks = "category";
 
 //Section veritabanına gelen değerlerin türü
   String _sectionsTableName = "section";
@@ -59,17 +62,20 @@ class LocalDataBase {
       String dataBasePath = join(filePath, "writer.db");
       // "filePath/writer.db";//Bu şekilde neden yapmadık derseniz bazı işletim sistemlerinde / bu kullanılırken bazılarında \ bu kullanılır.
       //join bunu işletim sistemine göre ayarlıyor.
-      
+
       // //Veri tabanını sil
       // await deleteDatabase(dataBasePath);
       //Eğer veri tabanı oluşmuşsa geri döndürecek eğer oluşmamışsa oluşturacaktır veri tabanını.O fonksiyonun ismide altta yazdığım fonksiyondur.
       _dataBase = await openDatabase(
         dataBasePath,
-        version: 1,
+        //Onupgrade çalışması için versiyonun değişmesi gerekir.
+        version: 3,
         //Tablo oluşturacağım fonksiyonu yazarım buraya,
         //Tablo oluşturma kısmı veri tabanını ilk kez oluşturduğumuzda çalıştığı için bölümler sayfasında fab basarak değer girdiğimizde çalışmadı.
         //oncreat parametresi oluşturulduğunda demektir.
+        //Veri tabanı hali hazırda oluştuğu zaman bşuna on create çlışmıyor.
         onCreate: _createTable,
+        onUpgrade: _updateApplication,
       ); //Future döndürdüğünden bunu veri tabanı nesneme atıyorum ve awaiti unutmuyorum.
     }
     return _dataBase;
@@ -84,6 +90,7 @@ class LocalDataBase {
 	$_booksId	INTEGER NOT NULL UNIQUE,
 	$_booksName	TEXT NOT NULL,
 	$_booksCreationDate	INTEGER,
+  $_categoryBooks	INTEGER DEFAULD 0,
 	PRIMARY KEY($_booksId AUTOINCREMENT)
 );
    """);
@@ -97,6 +104,27 @@ class LocalDataBase {
 	FOREIGN KEY("$_bookIdSections") REFERENCES "$_sectionsTableName"("$_booksId") ON UPDATE CASCADE ON DELETE CASCADE
 );
    """);
+  }
+
+  Future<void> _updateApplication(
+      Database db, int oldVersion, int newVersion) async {
+    List<String> updateCommands = [
+      //Burayı boş bırakarak bunu istenilen her projede kullanabiliriz.
+      // //Veri tabanında bir güncelleme yapmasını istediğimizde kullanırız.
+      // //Yeni veri eklemek istediğimizde bu kodu eklememiz gerekir ancak bunu her eklediğimizde versiyonu bir arttırmalıyız.
+      // //Bunun sebebi versiyon yükselttiğimizde updateApplication fonksiyonu çalışıyor.
+      // //Ancak kategori ekleme kısmıda tekrar çalıştığından farklı bir yöntem kullanmamız gerekir.
+      "ALTER TABLE $_booksTableName ADD COLUMN $_categoryBooks INTEGER DEFAULT 0",
+      "ALTER TABLE $_booksTableName ADD COLUMN test INTEGER DEFAULT 0",
+      //Yeni komutları buraya ekleyeceğiz.
+    ];
+    //Buradada üstteki liste için for döngüsü oluşturuyoruz.
+    // for(int i=oldVersion-1; i<newVersion-1; i++){
+    for(int i=0; i<2; i++){//Yani listenin birinci elemanı çalışacak Burda listede 
+    //hangisini çalıştırmak istiyorsak onu çalıştırabiliriz.
+      await db.execute(updateCommands[i]);
+    }
+    //Eski versiyon kullanıcı en son cihazında hangi versiyon ile çalıştığıdır.
   }
   // int? number;//Başlangıçta null olsun.
   //Singelton yapmaya neden ihityaç duyuyoruz.
