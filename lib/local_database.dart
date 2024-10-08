@@ -2,7 +2,6 @@
 //Modeller belirli bir sınıfa ayit nesneleri tek bir çatı altına toplamak içinde kullanılır.
 
 import 'dart:async';
-
 import 'package:flutter_writer_project/model/book.dart';
 import 'package:flutter_writer_project/model/section.dart';
 import 'package:sqflite/sqflite.dart';
@@ -107,19 +106,19 @@ class LocalDataBase {
 
   Future<void> _updateApplication(
       Database db, int oldVersion, int newVersion) async {
-    List<String> updateCommands = [
+    List<String> updateCommands = [];
       //Burayı boş bırakarak bunu istenilen her projede kullanabiliriz.
       // //Veri tabanında bir güncelleme yapmasını istediğimizde kullanırız.
       // //Yeni veri eklemek istediğimizde bu kodu eklememiz gerekir ancak bunu her eklediğimizde versiyonu bir arttırmalıyız.
       // //Bunun sebebi versiyon yükselttiğimizde updateApplication fonksiyonu çalışıyor.
       // //Ancak kategori ekleme kısmıda tekrar çalıştığından farklı bir yöntem kullanmamız gerekir.
-      "ALTER TABLE $_booksTableName ADD COLUMN $_categoryBooks INTEGER DEFAULT 0",
-      "ALTER TABLE $_booksTableName ADD COLUMN test INTEGER DEFAULT 0",
+      // "ALTER TABLE $_booksTableName ADD COLUMN $_categoryBooks INTEGER DEFAULT 0",
+      // "ALTER TABLE $_booksTableName ADD COLUMN test INTEGER DEFAULT 0",
       //Yeni komutları buraya ekleyeceğiz.
-    ];
+    
     //Buradada üstteki liste için for döngüsü oluşturuyoruz.
     // for(int i=oldVersion-1; i<newVersion-1; i++){
-    for (int i = 0; i < 2; i++) {
+    for (int i = oldVersion - 1; i < newVersion - 1; i++) {
       //Yani listenin birinci elemanı çalışacak Burda listede
       //hangisini çalıştırmak istiyorsak onu çalıştırabiliriz.
       await db.execute(updateCommands[i]);
@@ -150,15 +149,15 @@ class LocalDataBase {
 
 //Filtreleme için değişikliklerimizi burada yapıyoruz.
   //Read
-  Future<List<Book>> readAllBooks(int categoryId) async {
+  Future<List<Book>> readAllBooks(int categoryId, int lastBookId) async {
     Database? db = await _dataBaseBring();
     //b yi listeye ekleme işlemi
     List<Book> books = [];
     if (db != null) {
       //Where string
-      String? filter; //Filter başlangıçta null olsun.
+      String filter = "$_booksId > ?"; //Filter başlangıçta null olsun.
       //WhereArgs Liste
-      List<dynamic> filterArguments = [];
+      List<dynamic> filterArguments = [lastBookId];
 
       //Dart ve && sqlde ve and demektir.
       //Dartta veya || sqlde or demektir.
@@ -180,7 +179,7 @@ class LocalDataBase {
         // filterArguments.add(2);
         //Bu durumdada iki hariç olanları listeler.
 
-        filter = "$_categoryBooks = ?";
+        filter += " and $_categoryBooks = ?";
         filterArguments.add(categoryId);
       }
       //Map Türünde liste döndürecek.
@@ -200,8 +199,8 @@ class LocalDataBase {
 
         // orderBy: "$_booksName collate localized",//Türkçe karakterleride sıralamada gösterme en altta gözükmesini engelleme.Yerel sıralama yap demek.
 
-        orderBy: "$_booksName ",//Flutterda türkçe karaktere göre sıralama nasıl yapılıyor.
-
+        orderBy: "$_booksId ",//Flutterda türkçe karaktere göre sıralama nasıl yapılıyor.
+        limit: 15,
         // //Databasese kayıtlı verilerin istediğimiz kadarını çekme;
         // limit: 4,//4 veri çekilecek.//Kategori seçimi yaparsak seçtiğimiz verideki 4 veriyi getirir.
         
@@ -256,6 +255,44 @@ class LocalDataBase {
         //Alttaki 2 parametre olmazsa bütün kitaplar silinir.
         where: "$_booksId = ?",
         whereArgs: [book.id],
+      );
+    } else {
+      //Hiçbir satır silinmeyeceği için 0 döndürüyoruz.
+      return 0;
+    }
+  }
+
+  //Kitapları Silme İşlemi
+  Future<int> deleteBooks(List<int> booksId) async {
+    //Siliceğimiz kitapların idsinden oluşan değerleri alacak.
+    Database? db = await _dataBaseBring();
+    //Database nul olduğu için Null olup olmadığını kontrol etme işlemi;
+    if (db != null && booksId.isNotEmpty) {
+      //db null değil ve kitap id listesi boş değilse yap bu işlemi diyoruz.
+      //Silinen satır sayısını döndürecek.
+
+      String filter =
+          "$_booksId in ("; //Başlangıç kısmına $_booksId in bu kısmıda ekliyorum.
+
+      for (int i = 0; i < booksId.length; i++) {
+        //son elemanı bulmamız gerekecek.
+        if (i != booksId.length - 1) {
+          //i != booksId.length -1 son eleman kontrolü
+          filter += "?,";
+        } else {
+          filter += "?)";
+        }
+        //Üst kısımda bu where: "$_booksId in (?, ?, ?, ?)",işlemi yapıyoruz.
+      }
+
+      return await db.delete(
+        _booksTableName,
+        //Alttaki 2 parametre olmazsa bütün kitaplar silinir.
+        where: filter,
+        // where: "$_booksId in (?, ?, ?, ?)", //Silmek istediklerimiz için bunu yapabilirz ama bu çok fazla veri olduğunda doğru bir kullanım olmaz.
+        //Bu nedenle bunu başka türlü halletmeliyiz.
+        whereArgs:
+            booksId, //deletebooks () içerisindeki listenin adını buraya yazıyoruz.
       );
     } else {
       //Hiçbir satır silinmeyeceği için 0 döndürüyoruz.
@@ -338,43 +375,7 @@ class LocalDataBase {
     }
   }
 
-  //Kitapları Silme İşlemi
-  Future<int> deleteBooks(List<int> booksId) async {
-    //Siliceğimiz kitapların idsinden oluşan değerleri alacak.
-    Database? db = await _dataBaseBring();
-    //Database nul olduğu için Null olup olmadığını kontrol etme işlemi;
-    if (db != null && booksId.isNotEmpty) {
-      //db null değil ve kitap id listesi boş değilse yap bu işlemi diyoruz.
-      //Silinen satır sayısını döndürecek.
-
-      String filter =
-          "$_booksId in ("; //Başlangıç kısmına $_booksId in bu kısmıda ekliyorum.
-
-      for (int i = 0; i < booksId.length; i++) {
-        //son elemanı bulmamız gerekecek.
-        if (i != booksId.length - 1) {
-          //i != booksId.length -1 son eleman kontrolü
-          filter += "?,";
-        } else {
-          filter += "?)";
-        }
-        //Üst kısımda bu where: "$_booksId in (?, ?, ?, ?)",işlemi yapıyoruz.
-      }
-
-      return await db.delete(
-        _booksTableName,
-        //Alttaki 2 parametre olmazsa bütün kitaplar silinir.
-        where: filter,
-        // where: "$_booksId in (?, ?, ?, ?)", //Silmek istediklerimiz için bunu yapabilirz ama bu çok fazla veri olduğunda doğru bir kullanım olmaz.
-        //Bu nedenle bunu başka türlü halletmeliyiz.
-        whereArgs:
-            booksId, //deletebooks () içerisindeki listenin adını buraya yazıyoruz.
-      );
-    } else {
-      //Hiçbir satır silinmeyeceği için 0 döndürüyoruz.
-      return 0;
-    }
-  }
+  
 }
 //Listenin son elemanı herzaman listeninuzunluğu -1 elemandır.
 

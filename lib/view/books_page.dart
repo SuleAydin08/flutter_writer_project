@@ -13,12 +13,16 @@ class _BooksPageState extends State<BooksPage> {
   //Yerel veri tabanı türünden nesne oluşturuyoruz.
   LocalDataBase _localDataBase = LocalDataBase();
 
+  ScrollController _scrollController = ScrollController();
+
+    //Okuduğumuz listeyi sınıf değişkenine atama işlemi;
+  List<Book> _books = [];
+
   //Tüm kategorileri görüntüleme işlemi
   List<int> _allCategories = [
     -1
   ]; //Sıfırdan önceki -1 ise bütün kategorileri oluşturmasın demek istiyorum.-1 hiç bir kategoriye verilmeyecek.
-  //Okuduğumuz listeyi sınıf değişkenine atama işlemi;
-  List<Book> _books = [];
+
 
   int _selectedCategory = -1; //Seçilen kategori defaultda -1dir yani hepsidir.
 
@@ -30,6 +34,7 @@ class _BooksPageState extends State<BooksPage> {
     super.initState();
     //addAll bir liste alır ve verdiğim tüm öğeleri bu listeye ekler.
     _allCategories.addAll(Constants.categories.keys);
+    _scrollController.addListener(_scrollControl);
   }
 
   @override
@@ -46,7 +51,10 @@ class _BooksPageState extends State<BooksPage> {
       backgroundColor: Colors.deepPurple[100],
       title: Text("Kitaplar Sayfası"),
       actions: [
-        IconButton(onPressed: _selectedBookDelete, icon: Icon(Icons.delete)),
+        IconButton(
+          onPressed: _selectedBookDelete,
+          icon: Icon(Icons.delete),
+        ),
       ],
     );
   }
@@ -55,7 +63,10 @@ class _BooksPageState extends State<BooksPage> {
   Widget _buildBody() {
     //Future builder init state de kullanabilirdik ama ona alternatif olarak kullandık.
     //Future atadığım işlem bitinde builde atadığım fonksiyonu döndürüyor yani ekrana döndürüyor.
-    return FutureBuilder(future: _bringAllBooks(), builder: _buildListView);
+    return FutureBuilder(
+      future: _bringTheFirstBooks(),
+      builder: _buildListView
+      );
   }
 
   Widget _buildListView(BuildContext context, AsyncSnapshot<void> snapshot) {
@@ -65,6 +76,7 @@ class _BooksPageState extends State<BooksPage> {
         _buildCategoryFiltering(),
         Expanded(
           child: ListView.builder(
+            controller: _scrollController,
             itemCount: _books.length,
             itemBuilder: _buildListItem,
           ),
@@ -106,7 +118,7 @@ class _BooksPageState extends State<BooksPage> {
               });
             }
           },
-          //Bu kategori bilgisidir.
+          // //Bu kategori bilgisidir.
           value: _selectedCategory,
         ),
       ],
@@ -136,8 +148,8 @@ class _BooksPageState extends State<BooksPage> {
           //   icon: Icon(Icons.delete),
           // ),
           Checkbox(
-            value: _selectedBookId.contains(_books[index]
-                .id), //Seçilen kitap id denk gelen değer.
+            value: _selectedBookId.contains(
+                _books[index].id), //Seçilen kitap id denk gelen değer.
             onChanged: (bool? newValue) {
               if (newValue != null) {
                 int? bookId = _books[index].id;
@@ -196,20 +208,18 @@ class _BooksPageState extends State<BooksPage> {
       //Oluşturulan nesneyi veri tabanına değer olarak verilme işlemi; Döndüreceği id kullanıyoruz.
       int bookId = await _localDataBase.createBook(newBook);
       print("Book id: $bookId");
-
+      _books = [];
       //Veri ekleme işleminden sonra sayfanın veri eklendiğinde güncellenmesi için setstate çağırıyoruz.Artık floatin button eklediğimiz direk güncellenecek.
       setState(() {});
     }
 
     //100 tane veri ekleme işlemi;
-    // for(int i = 1 ; i <= 100 ; i++){
+    // for (int i = 1; i <= 100; i++) {
     //   Book newBook = Book(i.toString(), DateTime.now(), 0);
     //   int bookId = await _localDataBase.createBook(newBook);
     // }
-    // setState(() {
-    // });
+    // setState(() {});
 
-    
     // //Pencere kapandığında dönen değeri al
     // // print(bookName ?? "Null Döndü");//Ktap adı yoksa konsolda null döndü yazdır.//Burada kontrol yaptık.
 
@@ -258,25 +268,54 @@ class _BooksPageState extends State<BooksPage> {
     //Yerel kitao ağına silme fonksiyonunu gönderecek.
     int numberOfDeletedRows = await _localDataBase.deleteBook(book);
     if (numberOfDeletedRows > 0) {
+      _books = [];
       setState(() {});
     }
   }
 
   //Seçilen kitapları silmek için oluşturulan fonksiyon
-  void _selectedBookDelete() async{
+  void _selectedBookDelete() async {
     //Book book = _books[index]; bu kısıma ihtiyaç yok çünkü belirli indexteki kitapları silmiyoruz.
     //Yerel kitao ağına silme fonksiyonunu gönderecek.
     int numberOfDeletedRows = await _localDataBase.deleteBooks(_selectedBookId);
     if (numberOfDeletedRows > 0) {
+      //Anlık olarak güncelleyerek verileri silmesi için boş liste ekledim.
+      _books = [];
+      setState(() {});
+    }
+  }
+
+  Future<void> _bringTheFirstBooks() async {
+    if(_books.isEmpty) {
+      _books = await _localDataBase.readAllBooks(_selectedCategory, 0);
+      print("İlk kitaplar");
+      for(Book b in _books){
+        print("${b.name}, ");
+      }
+    }
+  }
+
+  Future<void> _bringTheLastBooks() async {
+    int? lastBookId = _books.last.id;
+
+    if (lastBookId != null) {
+      List<Book> lastBooks = await _localDataBase.readAllBooks(
+        _selectedCategory, lastBookId 
+      );
+      _books.addAll(lastBooks);
+      print("Sonraki kitaplar");
+      for(Book b in _books){
+        print("${b.name}, ");
+      }
       setState(() {});
     }
   }
 
   //Tüm kitapları getirme fonksiyonu
-  Future<void> _bringAllBooks() async {
-    _books = await _localDataBase.readAllBooks(
-        _selectedCategory); //Seçilen kategoriye göre listelemeyi sağlayacak.
-  }
+  // Future<void> _bringAllBooks() async {
+  //   _books = await _localDataBase.readAllBooks(
+  //       _selectedCategory); //Seçilen kategoriye göre listelemeyi sağlayacak.
+  // }
 
   //+ butonuna tıklandığında pencere açma
   //Altta sonuç ve kategoy olduğu için artık liste olara geleceği için String değil listedir.Strink ve int aldığımızdan
@@ -347,7 +386,7 @@ class _BooksPageState extends State<BooksPage> {
                             });
                           }
                         },
-                        //Bu kategori bilgisidir.
+                        // //Bu kategori bilgisidir.
                         value: category,
                       ),
                     ],
@@ -390,5 +429,11 @@ class _BooksPageState extends State<BooksPage> {
       return SectionsPage(_books[index]);
     });
     Navigator.push(context, pageRoute);
+  }
+
+  void _scrollControl() {
+    if(_scrollController.offset == _scrollController.position.maxScrollExtent){
+      _bringTheLastBooks();
+    }
   }
 }
