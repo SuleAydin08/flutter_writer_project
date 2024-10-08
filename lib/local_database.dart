@@ -102,20 +102,20 @@ class LocalDataBase {
       FOREIGN KEY($_bookIdSections) REFERENCES $_booksTableName($_booksId) ON UPDATE CASCADE ON DELETE CASCADE
     );
   """);
-}
+  }
 
   Future<void> _updateApplication(
       Database db, int oldVersion, int newVersion) async {
     List<String> updateCommands = [];
-      //Burayı boş bırakarak bunu istenilen her projede kullanabiliriz.
-      // //Veri tabanında bir güncelleme yapmasını istediğimizde kullanırız.
-      // //Yeni veri eklemek istediğimizde bu kodu eklememiz gerekir ancak bunu her eklediğimizde versiyonu bir arttırmalıyız.
-      // //Bunun sebebi versiyon yükselttiğimizde updateApplication fonksiyonu çalışıyor.
-      // //Ancak kategori ekleme kısmıda tekrar çalıştığından farklı bir yöntem kullanmamız gerekir.
-      // "ALTER TABLE $_booksTableName ADD COLUMN $_categoryBooks INTEGER DEFAULT 0",
-      // "ALTER TABLE $_booksTableName ADD COLUMN test INTEGER DEFAULT 0",
-      //Yeni komutları buraya ekleyeceğiz.
-    
+    //Burayı boş bırakarak bunu istenilen her projede kullanabiliriz.
+    // //Veri tabanında bir güncelleme yapmasını istediğimizde kullanırız.
+    // //Yeni veri eklemek istediğimizde bu kodu eklememiz gerekir ancak bunu her eklediğimizde versiyonu bir arttırmalıyız.
+    // //Bunun sebebi versiyon yükselttiğimizde updateApplication fonksiyonu çalışıyor.
+    // //Ancak kategori ekleme kısmıda tekrar çalıştığından farklı bir yöntem kullanmamız gerekir.
+    // "ALTER TABLE $_booksTableName ADD COLUMN $_categoryBooks INTEGER DEFAULT 0",
+    // "ALTER TABLE $_booksTableName ADD COLUMN test INTEGER DEFAULT 0",
+    //Yeni komutları buraya ekleyeceğiz.
+
     //Buradada üstteki liste için for döngüsü oluşturuyoruz.
     // for(int i=oldVersion-1; i<newVersion-1; i++){
     for (int i = oldVersion - 1; i < newVersion - 1; i++) {
@@ -139,8 +139,10 @@ class LocalDataBase {
     //Database nul olduğu için Null olup olmadığını kontrol etme işlemi;
     if (db != null) {
       //db.insert int id döndüreceğinden ve detayında awit yazdığından await yaparız ve future yaparız.Anında bir int döndürülmediği için future yaptık ve int değer alacağımız için int yazdık.
-      return await db.insert(_booksTableName,
-          book.toMap()); //Book nesnesi book türünde benden map istiyor book sınıfının içinde işlemler yapılır bunun için;
+      return await db.insert(
+          _booksTableName,
+          _bookToMap(
+              book)); //Book nesnesi book türünde benden map istiyor book sınıfının içinde işlemler yapılır bunun için;
     } else {
       //Nullsada bir değer döndürmen lazım. id -1 olamayacağından hata var demek ve değer döndüremeyecek demektir.
       return -1;
@@ -189,28 +191,28 @@ class LocalDataBase {
         where: filter, //Burada üst kısımda oluşturduğumuz değerleri veriyoruz.
         whereArgs:
             filterArguments, //Burada üst kısımda oluşturduğumuz değerleri veriyoruz.
-            //Verileri Alfabeye göre sıralama;
+        //Verileri Alfabeye göre sıralama;
         // orderBy: _booksName,//Kitap isimlerine gmre sıralamasını istiyorum.Başka bir şekilde sıralamak istediğimizde onu çağırarak yapabilir mesela _booksId...
         // orderBy: "$_booksId desc" //Büyükten küçüğe göre id göre sıralama.
-        //Kategori sıralamasına göre sıralama 
+        //Kategori sıralamasına göre sıralama
 
         // orderBy: "$_categoryBooks desc, $_booksName asc",//Kategori sıralamasına göre alfabetik olarak sıralama.
         //desc büyükten küçüğe, asc küçükten büyüğe asc yazmayada gerek yok çünkü veriler varsayılan olarak küçükten büyüğe sıralanır.
 
         // orderBy: "$_booksName collate localized",//Türkçe karakterleride sıralamada gösterme en altta gözükmesini engelleme.Yerel sıralama yap demek.
 
-        orderBy: "$_booksId ",//Flutterda türkçe karaktere göre sıralama nasıl yapılıyor.
+        orderBy:
+            "$_booksId ", //Flutterda türkçe karaktere göre sıralama nasıl yapılıyor.
         limit: 15,
         // //Databasese kayıtlı verilerin istediğimiz kadarını çekme;
         // limit: 4,//4 veri çekilecek.//Kategori seçimi yaparsak seçtiğimiz verideki 4 veriyi getirir.
-        
+
         // //Son kayıt edilen kitabı getirmek.
         // orderBy: "$_booksId desc",
         // limit: 1,
 
         // // //es geçmek istediğimiz veri sayısı;
         // offset: 2,//İlk 2 veriyi getirme demek.
-
       );
       // //Bütün kitaplar getirilsin demek
       //  List<Map<String, dynamic>> booksMap = await db.query(
@@ -218,7 +220,7 @@ class LocalDataBase {
       // );
       for (Map<String, dynamic> m in booksMap) {
         //m ismini verdiğim map kitaba çevireceğim.
-        Book b = Book.fromMap(m);
+        Book b = _mapToBook(m);
         //Kitap ekleme
         books.add(b);
       }
@@ -234,7 +236,7 @@ class LocalDataBase {
     if (db != null) {
       //idsi ? işaretine eşit olanı güncelle.
       return await db.update(
-        _booksTableName, book.toMap(), where: "$_booksId = ? ",
+        _booksTableName, _bookToMap(book), where: "$_booksId = ? ",
         whereArgs: [
           book.id
         ], //Kitap güncellenmiş olsada idsi aynı değişmeyecek.
@@ -375,7 +377,23 @@ class LocalDataBase {
     }
   }
 
-  
+//Ortak fonksiyon
+  Map<String, dynamic?> _bookToMap(Book book) {
+    Map<String, dynamic> bookMap = book.toMap();
+    DateTime? creationDate = bookMap["creationDate"];
+    if (creationDate != null) {
+      bookMap["creationDate"] = creationDate.millisecondsSinceEpoch;
+    }
+    return bookMap;
+  }
+//Model katmanını servis katmanından ayırmış olduk
+  Book _mapToBook(Map<String, dynamic> m) {
+    int? creationDate = m["creationDate"];
+    if (creationDate != null) {
+      m["creationDate"] = DateTime.fromMillisecondsSinceEpoch(creationDate);
+    }
+    return Book.fromMap(m);
+  }
 }
 //Listenin son elemanı herzaman listeninuzunluğu -1 elemandır.
 

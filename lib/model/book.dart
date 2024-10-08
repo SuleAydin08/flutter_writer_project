@@ -2,7 +2,7 @@ class Book {
   //id işlevi veri tabanında her bir öğeyi birbirinden ayırmak.
   //id herkeste farklı olabilecek bir değer olmalıdır.Benzersixz ve değişmez olması gerekir.
   //id int olur ve 1den başlayarak artar.
-  int? id;
+  dynamic id;//id dynamic yaparak her veri tabanı servisine uyumlu hale getirmiş oluyoruz.
   String name;
   //Datetime dartta tarih ve saati tuttuğumuz yapıdır.
   DateTime creationDate;

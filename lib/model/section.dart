@@ -1,5 +1,5 @@
 class Section{
-  int? id;//Bunu ben vermeyeceğim kendi otomatik olarak gelecek bu sebeple constructerda verilecek bu sebeple null
+  dynamic id;//Bunu ben vermeyeceğim kendi otomatik olarak gelecek bu sebeple constructerda verilecek bu sebeple null
   int bookId;
   String title;
   String contents;

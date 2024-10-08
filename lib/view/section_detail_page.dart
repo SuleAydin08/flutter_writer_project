@@ -1,17 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_writer_project/local_database.dart';
 import 'package:flutter_writer_project/model/section.dart';
 
 class SectionDetailPage extends StatelessWidget {
-
-  final Section _section;
-  
-  //Veri tabanı
-  LocalDataBase _localDataBase = LocalDataBase();
   //Text field controlü
   TextEditingController _contentController = TextEditingController();
 
-  SectionDetailPage(this._section, {super.key});
+  SectionDetailPage(Section section);
 
   @override
   Widget build(BuildContext context) {
@@ -21,17 +15,15 @@ class SectionDetailPage extends StatelessWidget {
     );
   }
 
-  AppBar _buildAppBar(){
+  AppBar _buildAppBar() {
     return AppBar(
       backgroundColor: Colors.deepPurple[100],
       title: Text(_section.title),
-      actions: [
-        IconButton(onPressed: _saveContent, icon: Icon(Icons.save))
-      ],
+      actions: [IconButton(onPressed: _saveContent, icon: Icon(Icons.save))],
     );
   }
 
-  Widget _buildBody(){
+  Widget _buildBody() {
     //Body oluşturulmadan section içeriğini veriyoruz.Ekran oluşturulduğunda artık bölümün içeriğini göstermesi gerektiğini biliyor.
     _contentController.text = _section.contents;
     return Padding(
@@ -42,18 +34,10 @@ class SectionDetailPage extends StatelessWidget {
         controller: _contentController,
         maxLines: 1000,
         decoration: InputDecoration(
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-          )
-        ),
+            border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        )),
       ),
     );
-  }
-
-  void _saveContent() async{
-    //Controllerın içeriğini okuma işlemi;
-    _section.contents = _contentController.text;
-    //Bölümü fonksiyona verme işlemi
-    await _localDataBase.updateSection(_section);
   }
 }
