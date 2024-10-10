@@ -46,7 +46,7 @@ class LocalDataBase {
   String _bookIdSections = "bookId";
   String _titleSections = "title";
   String _contentsSections = "contents";
-  // String _creationDateSections = "creationDate";
+  String _creationDateSections = "creationDate";
 
 //Üsteki nesneyi döndüreceğinden buda database döndürür.Üsteki nesneyi bu fonksiyon aracılığıyla kullanırız.
 ////Bu veri tabanı döndürüleceği için fonksiyonda null olur.
@@ -94,7 +94,7 @@ class LocalDataBase {
   """);
     await db.execute("""
     CREATE TABLE $_sectionsTableName (
-      $_idSections INTEGER PRIMARY KEY AUTOINCREMENT,
+      $_idSections INTEGER NOT NULL UNIQUE PRIMARY KEY AUTOINCREMENT,
       $_bookIdSections INTEGER NOT NULL,
       $_titleSections TEXT NOT NULL,
       $_contentsSections TEXT,
@@ -378,14 +378,21 @@ class LocalDataBase {
   }
 
 //Ortak fonksiyon
-  Map<String, dynamic?> _bookToMap(Book book) {
-    Map<String, dynamic> bookMap = book.toMap();
-    DateTime? creationDate = bookMap["creationDate"];
-    if (creationDate != null) {
-      bookMap["creationDate"] = creationDate.millisecondsSinceEpoch;
-    }
-    return bookMap;
+  Map<String, dynamic> _bookToMap(Book book) {
+  Map<String, dynamic> bookMap = {
+    "id": book.id,
+    "name": book.name,
+    // Diğer alanlar...
+  };
+
+  if (book.creationDate != null) {
+    bookMap["creationDate"] = book.creationDate!.millisecondsSinceEpoch; // int olarak sakla
+  } else {
+    bookMap["creationDate"] = null; // null olursa null sakla
   }
+
+  return bookMap;
+}
 //Model katmanını servis katmanından ayırmış olduk
   Book _mapToBook(Map<String, dynamic> m) {
     Map<String, dynamic> bookMap = Map.from(m);

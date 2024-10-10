@@ -3,14 +3,16 @@ import 'package:flutter_writer_project/local_database.dart';
 import 'package:flutter_writer_project/model/section.dart';
 
 class SectionsDetailViewModel with ChangeNotifier{
+
+  //Veri tabanı
+  LocalDataBase _localDataBase = LocalDataBase();
   final Section _section;
 
   Section get section => _section;
 
   SectionsDetailViewModel(this._section);
 
-  //Veri tabanı
-  LocalDataBase _localDataBase = LocalDataBase();
+  
 
   void saveContent(String contents) async {
 //Controllerın içeriğini okuma işlemi;

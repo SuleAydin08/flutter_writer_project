@@ -8,8 +8,8 @@ import 'package:provider/provider.dart';
 
 class SectionsViewModel with ChangeNotifier{
 
-   //Yerel veri tabanı türünden nesne oluşturuyoruz.
-  LocalDataBase _localDataBase = LocalDataBase();
+  //  //Yerel veri tabanı türünden nesne oluşturuyoruz.
+  LocalDataBase _localDataBase = LocalDataBase(); /////
 
   //Okuduğumuz listeyi sınıf değişkenine atama işlemi;
   List<Section> _sections = [];
@@ -44,6 +44,7 @@ class SectionsViewModel with ChangeNotifier{
           sectionTitle); //Datetime.now kitabın eklendiği tarihi bize verir.
       //Oluşturulan nesneyi veri tabanına değer olarak verilme işlemi; Döndüreceği id kullanıyoruz.
       int sectionId = await _localDataBase.createSection(newSection);
+      newSection.id =sectionId;
       print("Bölüm id: $sectionId");
       _sections.add(newSection);
       notifyListeners();
@@ -58,7 +59,6 @@ class SectionsViewModel with ChangeNotifier{
       section.update(newTitle);
       int numberOfUpdatedRows = await _localDataBase.updateSection(section);
       if(numberOfUpdatedRows > 0){
-        notifyListeners();
       }
     }
   }

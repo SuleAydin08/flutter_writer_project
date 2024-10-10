@@ -24,7 +24,7 @@ class BooksPage extends StatelessWidget {
       title: Text("Kitaplar Sayfası"),
       actions: [
         IconButton(
-          onPressed: viewModel.selectedBookDelete,
+          onPressed: (){viewModel.selectedBookDelete();},
           icon: Icon(Icons.delete),
         ),
       ],
@@ -146,6 +146,8 @@ class BooksPage extends StatelessWidget {
             ),
           ],
         ),
+        title: Text(book.name),
+        subtitle: Text(Constants.categories[book.category] ?? ""),
         onTap: () {
           viewModel.sectionPageOpen(context, index);
         },
@@ -155,9 +157,10 @@ class BooksPage extends StatelessWidget {
 
 //floating Action Button = Fab
   Widget _buildBookAddFab(BuildContext context) {
+    BooksViewModel viewModel = Provider.of<BooksViewModel>(context,listen: false,);
     return FloatingActionButton(
       onPressed: () {
-        Provider.of<BooksViewModel>(context, listen: false).bookAdd(context);
+        viewModel.bookAdd(context);
       },
       child: Icon(Icons.add),
     );

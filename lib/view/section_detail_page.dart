@@ -6,7 +6,6 @@ class SectionDetailPage extends StatelessWidget {
   //Text field controlü
   TextEditingController _contentController = TextEditingController();
 
-  SectionDetailPage({super.key});
 
   @override
   Widget build(BuildContext context) {
