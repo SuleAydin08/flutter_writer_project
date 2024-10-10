@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_writer_project/constants.dart';
+import 'package:flutter_writer_project/tools/constants.dart';
 import 'package:flutter_writer_project/model/book.dart';
 import 'package:flutter_writer_project/view_model/books_view_model.dart';
 import 'package:provider/provider.dart';

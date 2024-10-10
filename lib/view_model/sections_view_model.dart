@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_writer_project/local_database.dart';
 import 'package:flutter_writer_project/model/book.dart';
 import 'package:flutter_writer_project/model/section.dart';
+import 'package:flutter_writer_project/repository/database_repository.dart';
+import 'package:flutter_writer_project/tools/locator.dart';
 import 'package:flutter_writer_project/view/section_detail_page.dart';
 import 'package:flutter_writer_project/view_model/sections_detail_view_model.dart';
 import 'package:provider/provider.dart';
 
 class SectionsViewModel with ChangeNotifier{
 
-  //  //Yerel veri tabanı türünden nesne oluşturuyoruz.
-  LocalDataBase _localDataBase = LocalDataBase(); /////
+  DatabaseRepository _databaseRepository = locator<DatabaseRepository>();
 
   //Okuduğumuz listeyi sınıf değişkenine atama işlemi;
   List<Section> _sections = [];
@@ -43,7 +44,7 @@ class SectionsViewModel with ChangeNotifier{
       Section newSection = Section(idBook,
           sectionTitle); //Datetime.now kitabın eklendiği tarihi bize verir.
       //Oluşturulan nesneyi veri tabanına değer olarak verilme işlemi; Döndüreceği id kullanıyoruz.
-      int sectionId = await _localDataBase.createSection(newSection);
+      int sectionId = await _databaseRepository.createSection(newSection);
       newSection.id =sectionId;
       print("Bölüm id: $sectionId");
       _sections.add(newSection);
@@ -57,7 +58,7 @@ class SectionsViewModel with ChangeNotifier{
     if (newTitle != null) {
       Section section = _sections[index];
       section.update(newTitle);
-      int numberOfUpdatedRows = await _localDataBase.updateSection(section);
+      int numberOfUpdatedRows = await _databaseRepository.updateSection(section);
       if(numberOfUpdatedRows > 0){
       }
     }
@@ -65,7 +66,7 @@ class SectionsViewModel with ChangeNotifier{
 
   void sectionDelete(int index) async {
     Section section = _sections[index];
-    int numberOfDeletedRows = await _localDataBase.deleteSection(section);
+    int numberOfDeletedRows = await _databaseRepository.deleteSection(section);
     if(numberOfDeletedRows > 0){
       _sections.removeAt(index);
       notifyListeners();
@@ -101,7 +102,7 @@ class SectionsViewModel with ChangeNotifier{
     int? bookId = _book.id;
 
     if (bookId != null) {
-      _sections = await _localDataBase.readAllSection(bookId);
+      _sections = await _databaseRepository.readAllSection(bookId);
       notifyListeners();
     }
   }

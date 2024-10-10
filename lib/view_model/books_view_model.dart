@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_writer_project/constants.dart';
+import 'package:flutter_writer_project/repository/database_repository.dart';
+import 'package:flutter_writer_project/tools/constants.dart';
 import 'package:flutter_writer_project/local_database.dart';
 import 'package:flutter_writer_project/model/book.dart';
+import 'package:flutter_writer_project/tools/locator.dart';
 import 'package:flutter_writer_project/view/sections_page.dart';
 import 'package:flutter_writer_project/view_model/sections_view_model.dart';
 import 'package:provider/provider.dart';
@@ -9,8 +11,7 @@ import 'package:provider/provider.dart';
 //Uygulamanın işleyişi ile ilgili olan fonksiyonlarda view model katmanı ile ilgilidir.Her viewım bir view modeli olmalıdır.
 
 class BooksViewModel with ChangeNotifier {
-  //Yerel veri tabanı türünden nesne oluşturuyoruz.
-  LocalDataBase _localDataBase = LocalDataBase();
+  DatabaseRepository _databaseRepository = locator<DatabaseRepository>();
 
   ScrollController _scrollController = ScrollController();
   //Scrool controller için getter oluşturacağım.
@@ -67,7 +68,7 @@ class BooksViewModel with ChangeNotifier {
       Book newBook = Book(bookName, DateTime.now(),
           category); //Datetime.now kitabın eklendiği tarihi bize verir.
       //Oluşturulan nesneyi veri tabanına değer olarak verilme işlemi; Döndüreceği id kullanıyoruz.
-      int bookId = await _localDataBase.createBook(newBook);
+      int bookId = await _databaseRepository.createBook(newBook);
       newBook.id = bookId;
       print("Book id: $bookId");
       _books.add(newBook);
@@ -114,7 +115,7 @@ class BooksViewModel with ChangeNotifier {
         book.update(newBookName, newCategory); //Listedeki elemanı güncelleme
 
         //Ve bunu yerel kitap ağının update fonksiyonuna göndereceğim.
-        int numberOfRowsUpdated = await _localDataBase.updateBook(book);
+        int numberOfRowsUpdated = await _databaseRepository.updateBook(book);
         //Güncellenen satır sayısı 0dan büyük değilse;
         if (numberOfRowsUpdated > 0) {}
       }
@@ -126,7 +127,7 @@ class BooksViewModel with ChangeNotifier {
     //Listeden kitabı alma işlemi
     Book book = _books[index];
     //Yerel kitao ağına silme fonksiyonunu gönderecek.
-    int numberOfDeletedRows = await _localDataBase.deleteBook(book);
+    int numberOfDeletedRows = await _databaseRepository.deleteBook(book);
     if (numberOfDeletedRows > 0) {
       _books.removeAt(index);
       notifyListeners();
@@ -137,7 +138,7 @@ class BooksViewModel with ChangeNotifier {
   void selectedBookDelete() async {
     //Book book = _books[index]; bu kısıma ihtiyaç yok çünkü belirli indexteki kitapları silmiyoruz.
     //Yerel kitao ağına silme fonksiyonunu gönderecek.
-    int numberOfDeletedRows = await _localDataBase.deleteBooks(_selectedBookId);
+    int numberOfDeletedRows = await _databaseRepository.deleteBooks(_selectedBookId);
     if (numberOfDeletedRows > 0) {
       //Anlık olarak güncelleyerek verileri silmesi için boş liste ekledim.
       _books.removeWhere((book) => _selectedBookId.contains(book.id));
@@ -147,7 +148,7 @@ class BooksViewModel with ChangeNotifier {
 
   Future<void> _bringTheFirstBooks() async {
     if (_books.isEmpty) {
-      _books = await _localDataBase.readAllBooks(_selectedCategory, 0);
+      _books = await _databaseRepository.readAllBooks(_selectedCategory, 0);
       print("İlk kitaplar");
       for (Book b in _books) {
         print("${b.name}, ");
@@ -161,7 +162,7 @@ class BooksViewModel with ChangeNotifier {
 
     if (lastBookId != null) {
       List<Book> lastBooks =
-          await _localDataBase.readAllBooks(_selectedCategory, lastBookId);
+          await _databaseRepository.readAllBooks(_selectedCategory, lastBookId);
       _books.addAll(lastBooks);
       print("Sonraki kitaplar");
       for (Book b in _books) {

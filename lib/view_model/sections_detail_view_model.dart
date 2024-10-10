@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_writer_project/local_database.dart';
 import 'package:flutter_writer_project/model/section.dart';
+import 'package:flutter_writer_project/repository/database_repository.dart';
+import 'package:flutter_writer_project/tools/locator.dart';
 
 class SectionsDetailViewModel with ChangeNotifier{
 
-  //Veri tabanı
-  LocalDataBase _localDataBase = LocalDataBase();
+  DatabaseRepository _databaseRepository = locator<DatabaseRepository>();
+
   final Section _section;
 
   Section get section => _section;
@@ -18,6 +20,6 @@ class SectionsDetailViewModel with ChangeNotifier{
 //Controllerın içeriğini okuma işlemi;
     _section.contents = contents;
     //Bölümü fonksiyona verme işlemi
-    await _localDataBase.updateSection(_section);
+    await _databaseRepository.updateSection(_section);
   }
 }

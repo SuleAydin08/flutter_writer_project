@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_writer_project/tools/locator.dart';
 import 'package:flutter_writer_project/view/books_page.dart';
 import 'package:flutter_writer_project/view_model/books_view_model.dart';
 import 'package:provider/provider.dart';
 
 void main() {
+  setupLocator();
   //Veritabanı nesneleri
 //   //Burada localdatabase sayfasında oluşturduğumuz constructerı çalıştırır.
 //   LocalDataBase d1 = LocalDataBase();
