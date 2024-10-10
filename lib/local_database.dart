@@ -388,11 +388,12 @@ class LocalDataBase {
   }
 //Model katmanını servis katmanından ayırmış olduk
   Book _mapToBook(Map<String, dynamic> m) {
-    int? creationDate = m["creationDate"];
+    Map<String, dynamic> bookMap = Map.from(m);
+    int? creationDate = bookMap["creationDate"];
     if (creationDate != null) {
-      m["creationDate"] = DateTime.fromMillisecondsSinceEpoch(creationDate);
+      bookMap["creationDate"] = DateTime.fromMillisecondsSinceEpoch(creationDate);
     }
-    return Book.fromMap(m);
+    return Book.fromMap(bookMap);
   }
 }
 //Listenin son elemanı herzaman listeninuzunluğu -1 elemandır.

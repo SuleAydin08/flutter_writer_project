@@ -3,22 +3,32 @@ import 'package:flutter_writer_project/local_database.dart';
 import 'package:flutter_writer_project/model/book.dart';
 import 'package:flutter_writer_project/model/section.dart';
 import 'package:flutter_writer_project/view/section_detail_page.dart';
+import 'package:flutter_writer_project/view_model/sections_detail_view_model.dart';
+import 'package:provider/provider.dart';
 
-class SectionsViewModel {
+class SectionsViewModel with ChangeNotifier{
 
    //Yerel veri tabanı türünden nesne oluşturuyoruz.
   LocalDataBase _localDataBase = LocalDataBase();
 
   //Okuduğumuz listeyi sınıf değişkenine atama işlemi;
   List<Section> _sections = [];
+  
+  List<Section> get sections => _sections;
 
   final Book _book;
 
+  Book get book => _book;
 
-  SectionsViewModel(this._book);
+
+  SectionsViewModel(this._book){
+    WidgetsBinding.instance.addPostFrameCallback((_){
+      _bringAllSections();
+    });
+  }
   
   //Kitap ekleme
-  void _sectionAdd(BuildContext context) async {
+  void sectionAdd(BuildContext context) async {
     //Onayla butonunun döndürdüğü değeri kullanma
     //Open window future döndürdüğü için await async kullanılır.
     //Pencere ne zaman kapanırsa String değer o zaman dönecek.
@@ -35,30 +45,31 @@ class SectionsViewModel {
       //Oluşturulan nesneyi veri tabanına değer olarak verilme işlemi; Döndüreceği id kullanıyoruz.
       int sectionId = await _localDataBase.createSection(newSection);
       print("Bölüm id: $sectionId");
-
-      //Veri ekleme işleminden sonra sayfanın veri eklendiğinde güncellenmesi için setstate çağırıyoruz.Artık floatin button eklediğimiz direk güncellenecek.
-
-      // setState(() {});
+      _sections.add(newSection);
+      notifyListeners();
     }
   }
 
   //Kitapları Güncelleme//Open contextini ve update için indexti aldık.
-  void _sectionUpdate(BuildContext context, int index) async {
-    String? newSectionTitle = await _openWindow(context);
-    if (newSectionTitle != null) {
+  void sectionUpdate(BuildContext context, int index) async {
+    String? newTitle = await _openWindow(context);
+    if (newTitle != null) {
       Section section = _sections[index];
-      section.title = newSectionTitle;
-      await _localDataBase.updateSection(section);
-      await _bringAllSections(); // Tüm bölümleri yeniden al
-      // setState(() {});
+      section.update(newTitle);
+      int numberOfUpdatedRows = await _localDataBase.updateSection(section);
+      if(numberOfUpdatedRows > 0){
+        notifyListeners();
+      }
     }
   }
 
-  void _sectionDelete(int index) async {
+  void sectionDelete(int index) async {
     Section section = _sections[index];
-    await _localDataBase.deleteSection(section);
-    await _bringAllSections(); // Tüm bölümleri yeniden al
-    // setState(() {});
+    int numberOfDeletedRows = await _localDataBase.deleteSection(section);
+    if(numberOfDeletedRows > 0){
+      _sections.removeAt(index);
+      notifyListeners();
+    }
   }
 
   //   if (newSectionTitle != null) {
@@ -91,6 +102,7 @@ class SectionsViewModel {
 
     if (bookId != null) {
       _sections = await _localDataBase.readAllSection(bookId);
+      notifyListeners();
     }
   }
 
@@ -138,9 +150,9 @@ class SectionsViewModel {
   }
 
   //Bölümler söyfasını açıcak kodu yazıyoruz.
-  void _sectionDetailPageOpen(BuildContext context, int index) {
+  void sectionDetailPageOpen(BuildContext context, int index) {
     MaterialPageRoute pageRoute = MaterialPageRoute(builder: (context) {
-      return SectionDetailPage(_sections[index]);
+      return ChangeNotifierProvider(create: (context) => SectionsDetailViewModel(_sections[index]),child: SectionDetailPage(),);
     });
     Navigator.push(context, pageRoute);
   }

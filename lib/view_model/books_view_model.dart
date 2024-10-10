@@ -3,39 +3,60 @@ import 'package:flutter_writer_project/constants.dart';
 import 'package:flutter_writer_project/local_database.dart';
 import 'package:flutter_writer_project/model/book.dart';
 import 'package:flutter_writer_project/view/sections_page.dart';
+import 'package:flutter_writer_project/view_model/sections_view_model.dart';
+import 'package:provider/provider.dart';
 
 //Uygulamanın işleyişi ile ilgili olan fonksiyonlarda view model katmanı ile ilgilidir.Her viewım bir view modeli olmalıdır.
 
-class BooksViewModel {
+class BooksViewModel with ChangeNotifier{
 
     //Yerel veri tabanı türünden nesne oluşturuyoruz.
   LocalDataBase _localDataBase = LocalDataBase();
 
   ScrollController _scrollController = ScrollController();
+  //Scrool controller için getter oluşturacağım.
+  ScrollController get scrollController => _scrollController;
 
     //Okuduğumuz listeyi sınıf değişkenine atama işlemi;
   List<Book> _books = [];
+
+  //Kitaplar listesinin getiri;
+  List<Book> get books => _books;
 
   //Tüm kategorileri görüntüleme işlemi
   List<int> _allCategories = [
     -1
   ]; //Sıfırdan önceki -1 ise bütün kategorileri oluşturmasın demek istiyorum.-1 hiç bir kategoriye verilmeyecek.
 
+  List<int> get allCategories => _allCategories;
 
   int _selectedCategory = -1; //Seçilen kategori defaultda -1dir yani hepsidir.
 
+  int get selectedCategory  => _selectedCategory;
+
+  set selectedCategory(int value) {
+    _selectedCategory = value;
+    notifyListeners();
+    _bringTheFirstBooks();
+  }
+
   //in anahtar kelimesini mesela verilerin hepsini silmekı istiyoruz checkbox yardımıyla ve in anahtar kelimesi ile bunu kolaylıkla yapabiliriz.
   List<int> _selectedBookId = [];
+
+  List<int> get selectedBookId => _selectedBookId;
 
   BooksViewModel(){
     //addAll bir liste alır ve verdiğim tüm öğeleri bu listeye ekler.
     _allCategories.addAll(Constants.categories.keys);
     _scrollController.addListener(_scrollControl);
+    WidgetsBinding.instance.addPostFrameCallback((_){
+      _bringTheFirstBooks();
+    });
   }
   
   //Kitap ekleme
   //Burada for döngüsü ile 100 tane veri ekleyeceğiz.
-  void _bookAdd(BuildContext context) async {
+  void bookAdd(BuildContext context) async {
     //Onayla butonunun döndürdüğü değeri kullanma
     //Open window future döndürdüğü için await async kullanılır.
     //Pencere ne zaman kapanırsa String değer o zaman dönecek.
@@ -46,15 +67,20 @@ class BooksViewModel {
       String bookName = conclusion[0];
       int category = conclusion[1];
 
-      //kitapadı null değilse yeni bir kitap oluşturalım.
-      Book newBook = Book(bookName, DateTime.now(),
+      if(bookName.isNotEmpty){
+        Book newBook = Book(bookName, DateTime.now(),
           category); //Datetime.now kitabın eklendiği tarihi bize verir.
       //Oluşturulan nesneyi veri tabanına değer olarak verilme işlemi; Döndüreceği id kullanıyoruz.
       int bookId = await _localDataBase.createBook(newBook);
+      newBook.id = bookId;
       print("Book id: $bookId");
-      _books = [];
-      //Veri ekleme işleminden sonra sayfanın veri eklendiğinde güncellenmesi için setstate çağırıyoruz.Artık floatin button eklediğimiz direk güncellenecek.
-      // setState(() {});
+      _books.add(newBook);
+      notifyListeners();
+      // _books = [];
+      // //Veri ekleme işleminden sonra sayfanın veri eklendiğinde güncellenmesi için setstate çağırıyoruz.Artık floatin button eklediğimiz direk güncellenecek.
+      // // setState(() {});
+      }
+      
     }
 
     //100 tane veri ekleme işlemi;
@@ -81,7 +107,7 @@ class BooksViewModel {
   }
 
   //Kitapları Güncelleme//Open contextini ve update için indexti aldık.
-  void _bookUpdate(BuildContext context, int index) async {
+  void bookUpdate(BuildContext context, int index) async {
     Book book = _books[index];
     List<dynamic>? conclusion = await _openWindow(context,
         availableName: book.name, availableCategory: book.category);
@@ -91,51 +117,45 @@ class BooksViewModel {
       int newCategory = conclusion[1];
       //İkiside aynıysa veri tabanı işlemi yapmaya gerek yok bu sebeple buraya girilmeyecek.
       if (book.name != newBookName || book.category != newCategory) {
-        Book book = _books[index]; //Önce eski kitabı listeden alacak.
-        book.name = newBookName; //İsmi yeni kitap adıyla değiştireceğiz.
-        //Kategori güncelleme kısmı
-        book.category = newCategory;
+        book.update(newBookName, newCategory);//Listedeki elemanı güncelleme
+        
         //Ve bunu yerel kitap ağının update fonksiyonuna göndereceğim.
         int numberOfRowsUpdated = await _localDataBase.updateBook(book);
         //Güncellenen satır sayısı 0dan büyük değilse;
         if (numberOfRowsUpdated > 0) {
-          // setState(() {});
         }
       }
     }
   }
 
   //Kitapları silme fonksiyonu
-  void _bookDelete(int index) async {
+  void bookDelete(int index) async {
     //Listeden kitabı alma işlemi
     Book book = _books[index];
     //Yerel kitao ağına silme fonksiyonunu gönderecek.
     int numberOfDeletedRows = await _localDataBase.deleteBook(book);
     if (numberOfDeletedRows > 0) {
-      _books = [];
-      // setState(() {});
+      _books.removeAt(index);
+      notifyListeners();
     }
   }
 
   //Seçilen kitapları silmek için oluşturulan fonksiyon
-  void _selectedBookDelete() async {
+  void selectedBookDelete() async {
     //Book book = _books[index]; bu kısıma ihtiyaç yok çünkü belirli indexteki kitapları silmiyoruz.
     //Yerel kitao ağına silme fonksiyonunu gönderecek.
     int numberOfDeletedRows = await _localDataBase.deleteBooks(_selectedBookId);
     if (numberOfDeletedRows > 0) {
       //Anlık olarak güncelleyerek verileri silmesi için boş liste ekledim.
-      _books = [];
-      // setState(() {});
+      _books.removeWhere((book) => _selectedBookId.contains(book.id));
+      notifyListeners();
     }
   }
 
   Future<void> _bringTheFirstBooks() async {
     if(_books.isEmpty) {
       _books = await _localDataBase.readAllBooks(_selectedCategory, 0);
-      print("İlk kitaplar");
-      for(Book b in _books){
-        print("${b.name}, ");
-      }
+      notifyListeners();
     }
   }
 
@@ -151,7 +171,7 @@ class BooksViewModel {
       for(Book b in _books){
         print("${b.name}, ");
       }
-      // setState(() {});
+      notifyListeners();
     }
   }
 
@@ -268,9 +288,10 @@ class BooksViewModel {
   }
 
   //Bölümler söyfasını açıcak kodu yazıyoruz.
-  void _sectionPageOpen(BuildContext context, int index) {
+  void sectionPageOpen(BuildContext context, int index) {
     MaterialPageRoute pageRoute = MaterialPageRoute(builder: (context) {
-      return SectionsPage(_books[index]);
+      return ChangeNotifierProvider(create: (context) => SectionsViewModel(_books[index]),child: SectionsPage(),);
+
     });
     Navigator.push(context, pageRoute);
   }

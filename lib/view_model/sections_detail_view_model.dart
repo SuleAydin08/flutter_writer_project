@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_writer_project/local_database.dart';
 import 'package:flutter_writer_project/model/section.dart';
 
-class SectionsDetailViewModel {
+class SectionsDetailViewModel with ChangeNotifier{
   final Section _section;
+
+  Section get section => _section;
 
   SectionsDetailViewModel(this._section);
 
   //Veri tabanı
   LocalDataBase _localDataBase = LocalDataBase();
 
-  void _saveContent(String contents) async {
+  void saveContent(String contents) async {
 //Controllerın içeriğini okuma işlemi;
     _section.contents = contents;
     //Bölümü fonksiyona verme işlemi

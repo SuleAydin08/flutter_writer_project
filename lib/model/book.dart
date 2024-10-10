@@ -1,4 +1,6 @@
-class Book {
+import 'package:flutter/material.dart';
+
+class Book with ChangeNotifier{
   //id işlevi veri tabanında her bir öğeyi birbirinden ayırmak.
   //id herkeste farklı olabilecek bir değer olmalıdır.Benzersixz ve değişmez olması gerekir.
   //id int olur ve 1den başlayarak artar.
@@ -7,6 +9,8 @@ class Book {
   //Datetime dartta tarih ve saati tuttuğumuz yapıdır.
   DateTime creationDate;
   int category;//Categorinin int değerlerini alacağım için int.
+
+  bool isItSelected = false;
 
   //id biz kendimiz belirlemeyecğimiz için constructerda almıyoruz.Bu sebeple id null yapılırsa sorun çözülür.
   Book(this.name, this.creationDate, this.category);
@@ -30,6 +34,16 @@ class Book {
       //millisecondsSinceEpoch mili saniyeye çevirme işlemi yapar.
       "category": category,
     };
+  }
+  void update(String newName, int newCategory){
+    name = newName;
+    category = newCategory;
+    notifyListeners();
+  }
+
+  void choose(bool newValue){
+    isItSelected = newValue;
+    notifyListeners();
   }
 }
 

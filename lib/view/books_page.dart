@@ -1,23 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_writer_project/constants.dart';
+import 'package:flutter_writer_project/model/book.dart';
+import 'package:flutter_writer_project/view_model/books_view_model.dart';
+import 'package:provider/provider.dart';
 
 class BooksPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: _buildAppBar(),
+      appBar: _buildAppBar(context),
       body: _buildBody(),
       floatingActionButton: _buildBookAddFab(context),
     );
   }
 
-  AppBar _buildAppBar() {
+  AppBar _buildAppBar(BuildContext context) {
+    BooksViewModel viewModel = Provider.of<BooksViewModel>(
+      context,
+      listen: false,
+    );
     return AppBar(
       backgroundColor: Colors.deepPurple[100],
       title: Text("Kitaplar Sayfası"),
       actions: [
         IconButton(
-          onPressed: _selectedBookDelete,
+          onPressed: viewModel.selectedBookDelete,
           icon: Icon(Icons.delete),
         ),
       ],
@@ -26,22 +33,23 @@ class BooksPage extends StatelessWidget {
 
   //body
   Widget _buildBody() {
-    //Future builder init state de kullanabilirdik ama ona alternatif olarak kullandık.
-    //Future atadığım işlem bitinde builde atadığım fonksiyonu döndürüyor yani ekrana döndürüyor.
-    return FutureBuilder(
-        future: _bringTheFirstBooks(), builder: _buildListView);
-  }
-
-  Widget _buildListView(BuildContext context, AsyncSnapshot<void> snapshot) {
     return Column(
       //Column içerisinde listview builder kullandığımız içinde listviewbuilderı expanded ile sarmamız gerekir.
       children: [
         _buildCategoryFiltering(),
         Expanded(
-          child: ListView.builder(
-            controller: _scrollController,
-            itemCount: _books.length,
-            itemBuilder: _buildListItem,
+          child: Consumer<BooksViewModel>(
+            builder: (context, viewModel, child) => ListView.builder(
+              //Kitaplar listesinde yapılacak değişiklikleri dinlemek istediğimiz için consumer ile yapıyıoruz.
+              controller: viewModel.scrollController,
+              itemCount: viewModel.books.length,
+              itemBuilder: (context, index) {
+                return ChangeNotifierProvider.value(
+                  value: viewModel.books[index],
+                  child: _buildListItem(context, index),
+                );
+              },
+            ),
           ),
         ),
       ],
@@ -53,92 +61,95 @@ class BooksPage extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
         Text("Kategori: "),
-        DropdownButton<int>(
-          items: _allCategories.map((categoryId) {
-            //Categoy key gezip atama işlemi yapılıyor.
-            return DropdownMenuItem<int>(
-              value: categoryId,
-              child: Text(
-                //Kategori id -1 ise hepsini yazdır değilse alttaki ifadeyi yazdır demek.
-                categoryId == -1
-                    ? "Hepsi"
-                    : Constants.categories[categoryId] ??
-                        "", //Burada hangi anahtarda ise buna karşılık gelen değeri getirecek.
-              ),
-            );
-          }).toList(),
-          //Değer değiştiğinde değer yani fonksiyon atanır.
-          onChanged: (int? newValue) {
-            if (newValue != null) {
-              setState(() {
-                //Yeni değer null değilse categorydeki değeri yeni değere ata demek.
-                _selectedCategory =
-                    newValue; //Burada yaptığımız işleme rağmen sayfada seçtiğimiz değer gelmedi bunun sebebi burda
-                //kullandığımız setstate BooksPage sayfasınındır çünkü dialog her ne kadar o sayfada açılmış gibi gözüksede ayrı sayfadır.
-                //Yani dialogun ayrı bir stateti olması gerekir.
-                //O halde burda ne yapacağız biz üst ksıımda yaptığımız columnı ayrı bir widget olarak tanımlayıp bu sayfada content
-                //içerisinde onu çağırabiliriz.Ama biz buu önceki projelerde yaptığımız için farklı bir yöntem ile yapacağız.
-              });
-            }
-          },
-          // //Bu kategori bilgisidir.
-          value: _selectedCategory,
+        Consumer<BooksViewModel>(
+          builder: (context, viewModel, child) => DropdownButton<int>(
+            items: viewModel.allCategories.map((categoryId) {
+              //Categoy key gezip atama işlemi yapılıyor.
+              return DropdownMenuItem<int>(
+                value: categoryId,
+                child: Text(
+                  //Kategori id -1 ise hepsini yazdır değilse alttaki ifadeyi yazdır demek.
+                  categoryId == -1
+                      ? "Hepsi"
+                      : Constants.categories[categoryId] ??
+                          "", //Burada hangi anahtarda ise buna karşılık gelen değeri getirecek.
+                ),
+              );
+            }).toList(),
+            //Değer değiştiğinde değer yani fonksiyon atanır.
+            onChanged: (int? newValue) {
+              if (newValue != null) {
+                viewModel.selectedCategory = newValue;
+                // setState(() {
+                //   //Yeni değer null değilse categorydeki değeri yeni değere ata demek.
+                //   _selectedCategory =
+                //       newValue; //Burada yaptığımız işleme rağmen sayfada seçtiğimiz değer gelmedi bunun sebebi burda
+                //   //kullandığımız setstate BooksPage sayfasınındır çünkü dialog her ne kadar o sayfada açılmış gibi gözüksede ayrı sayfadır.
+                //   //Yani dialogun ayrı bir stateti olması gerekir.
+                //   //O halde burda ne yapacağız biz üst ksıımda yaptığımız columnı ayrı bir widget olarak tanımlayıp bu sayfada content
+                //   //içerisinde onu çağırabiliriz.Ama biz buu önceki projelerde yaptığımız için farklı bir yöntem ile yapacağız.
+                // });
+              }
+            },
+            // //Bu kategori bilgisidir.
+            value: viewModel.selectedCategory,
+          ),
         ),
       ],
     );
   }
 
   Widget _buildListItem(BuildContext context, int index) {
-    return ListTile(
-      leading: CircleAvatar(
-        child: Text(_books[index].id.toString()),
-      ),
-      //Rowla direk sardığımızda row bütün satırı kaplar.
-      trailing: Row(
-        //Rowun tüm satırı kaplamasını engellemek için yapılır.
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          IconButton(
-              onPressed: () {
-                _bookUpdate(context, index);
-              },
-              icon: Icon(Icons.edit)),
-          // IconButton(
-          //   //Biz 4 kitabı sildiğimizde kitap eklediğimizde sildiğimiz veri id yerine hiç bir zaman bir eklenmez sayı en sonda olduğı sayıdan devam eder.
-          //   onPressed: () {
-          //     _bookDelete(index);
-          //   },
-          //   icon: Icon(Icons.delete),
-          // ),
-          Checkbox(
-            value: _selectedBookId.contains(
-                _books[index].id), //Seçilen kitap id denk gelen değer.
-            onChanged: (bool? newValue) {
-              if (newValue != null) {
-                int? bookId = _books[index].id;
-                if (bookId != null) {
-                  setState(() {
-                    //Bu işlemlerisetsate içerisinde yapmazsak checkbox bassak bile bir değişim göremeyiz.
+    BooksViewModel viewModel = Provider.of<BooksViewModel>(
+      context,
+      listen: false,
+    );
+    return Consumer<Book>(
+      builder: (context, book, child) => ListTile(
+        leading: CircleAvatar(
+          child: Text(book.id.toString()),
+        ),
+        //Rowla direk sardığımızda row bütün satırı kaplar.
+        trailing: Row(
+          //Rowun tüm satırı kaplamasını engellemek için yapılır.
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+                onPressed: () {
+                  viewModel.bookUpdate(context, index);
+                },
+                icon: Icon(Icons.edit)),
+            // IconButton(
+            //   //Biz 4 kitabı sildiğimizde kitap eklediğimizde sildiğimiz veri id yerine hiç bir zaman bir eklenmez sayı en sonda olduğı sayıdan devam eder.
+            //   onPressed: () {
+            //     _bookDelete(index);
+            //   },
+            //   icon: Icon(Icons.delete),
+            // ),
+            Checkbox(
+              value: book.isItSelected, //Seçilen kitap id denk gelen değer.
+              onChanged: (bool? newValue) {
+                if (newValue != null) {
+                  int? bookId = book.id;
+                  if (bookId != null) {
                     if (newValue) {
                       //Seçildiyse
-                      _selectedBookId.add(bookId);
+                      viewModel.selectedBookId.add(bookId);
                     } else {
                       //Seçilme kaldırıldığında
-                      _selectedBookId.remove(bookId);
+                      viewModel.selectedBookId.remove(bookId);
                     }
-                  });
+                  book.choose(newValue);
+                  }
                 }
-              }
-            },
-          ),
-        ],
+              },
+            ),
+          ],
+        ),
+        onTap: () {
+          viewModel.sectionPageOpen(context, index);
+        },
       ),
-      title: Text(_books[index].name),
-      //Kategorileri başlığın altında görüntüleme işlemi.
-      subtitle: Text(Constants.categories[_books[index].category] ?? ""),
-      onTap: () {
-        _sectionPageOpen(context, index);
-      },
     );
   }
 
@@ -146,7 +157,7 @@ class BooksPage extends StatelessWidget {
   Widget _buildBookAddFab(BuildContext context) {
     return FloatingActionButton(
       onPressed: () {
-        _bookAdd(context);
+        Provider.of<BooksViewModel>(context, listen: false).bookAdd(context);
       },
       child: Icon(Icons.add),
     );

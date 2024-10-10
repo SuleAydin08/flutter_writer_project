@@ -1,4 +1,6 @@
-class Section{
+import 'package:flutter/material.dart';
+
+class Section with ChangeNotifier{
   dynamic id;//Bunu ben vermeyeceğim kendi otomatik olarak gelecek bu sebeple constructerda verilecek bu sebeple null
   int bookId;
   String title;
@@ -25,5 +27,8 @@ class Section{
       "contents": contents,
     };
   }
-  
+  void update(String newTitle){
+    title = newTitle;
+    notifyListeners();
+  }
 }

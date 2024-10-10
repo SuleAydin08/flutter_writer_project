@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_writer_project/view/books_page.dart';
+import 'package:flutter_writer_project/view_model/books_view_model.dart';
+import 'package:provider/provider.dart';
 
 void main() {
   //Veritabanı nesneleri
@@ -22,7 +24,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
     debugShowCheckedModeBanner: false,
-    home: BooksPage(),
+    home:ChangeNotifierProvider(create: (context) =>  BooksViewModel(),child: BooksPage(),),
     );
   }
 }
